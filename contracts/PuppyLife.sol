@@ -12,23 +12,37 @@ contract PuppyLife is ERC721URIStorage, Ownable {
     Counters.Counter private tokenIds;
     Counters.Counter private userIds;
 
-
-    struct nftStruct {
+    struct dogInfo{
         uint256 tokenId;
         address payable owner;
-        string title;
+        // 이름
+        string name;
+        // 견종
+        string breed;
+        // 생일
+        string birthDate;
+        // 성별 
+        string gender;
+        // 소개글
         string description;
+        // 사진
         string image;
-        string tokenUri;
     }
 
-    mapping(uint256 => nftStruct) private nfts;
-    mapping(address => uint256 []) private nftOwners;
 
-    event NftStructCreated(
+    
+
+    mapping(uint256 => dogInfo) private nfts;
+    mapping(address => uint256 []) private nftOwners;
+    mapping(uint256 => string) private tokenURIs;
+    
+    event DogInfoCreated(
         uint256 indexed tokenId,
         address payable owner,
-        string title,
+        string name,
+        string breed,
+        string birthDate,
+        string gender,
         string description,
         string image
     );
@@ -41,70 +55,69 @@ contract PuppyLife is ERC721URIStorage, Ownable {
 
     function setNft(
         uint256 _tokenId,
-        string memory _title,
-        string memory _description,
-        string memory _tokenURI,
-        string memory _image
+        dogInfo memory _info,
+        string memory tokenURI
     ) private {
 
         nfts[_tokenId].tokenId = _tokenId;
         nfts[_tokenId].owner = payable(msg.sender);
-        nfts[_tokenId].title = _title;
-        nfts[_tokenId].description = _description;
-        nfts[_tokenId].tokenUri = _tokenURI;
-        nfts[_tokenId].image = _image;
-
-        emit NftStructCreated(
+        nfts[_tokenId].name = _info.name;
+        nfts[_tokenId].breed = _info.breed;
+        nfts[_tokenId].birthDate = _info.birthDate;
+        nfts[_tokenId].gender = _info.gender;
+        nfts[_tokenId].description = _info.description;
+        nfts[_tokenId].image = _info.image;
+        tokenURIs[_tokenId] = tokenURI;
+        emit DogInfoCreated(
             _tokenId,
             payable(msg.sender),
-            _title,
-            _description,
-            _image
+            _info.name,
+            _info.breed,
+            _info.birthDate,
+            _info.gender,
+            _info.description,
+            _info.image
         );
     }
+
     /// @dev this function mints received NFTs
-    /// @param _tokenURI the new token URI for the magazine cover
-    /// @param _title the name of the magazine cover
-    /// @param _description detailed information on the magazine NFT
-    /// @param _image image
-    // /// @return tokenId of the created NFT
+    /// @param _name name
+    /// @param _breed breed
+    /// @param _birthDate birthDate
+    /// @param _gender gender
+    /// @param _description description
+    /// @param _image image Url
+    /// @param _tokenURI image Url
+    /// @return newTokenId of the created NFT
     function createNft(
-        string memory _tokenURI,
-        string memory _title,
-        string memory _description,
-        string memory _image
-    ) public  {
-        
+            string memory _name,
+            string memory _breed,
+            string memory _birthDate,
+            string memory _gender,
+            string memory _description,
+            string memory _image,
+            string memory _tokenURI
+        )
+
+        public returns(uint256) {
         uint256 newTokenId = tokenIds.current();
         _mint(msg.sender, newTokenId);
+
         _setTokenURI(newTokenId, _tokenURI);
         nftOwners[msg.sender].push(newTokenId);
-        setNft(newTokenId, _title, _description, _tokenURI, _image);
+        dogInfo memory _info = dogInfo(newTokenId, payable(msg.sender), _name, _breed, _birthDate, _gender, _description, _image);
+        setNft(
+            newTokenId, _info, _tokenURI
+        );
         tokenIds.increment();
+        return newTokenId;
     }
 
-
-    
-    // not use
-    /// @dev fetches NFT magazines that a specific user has created
+    /// @dev fetches NFT that a specific user has created
     /// @return nftStruct[] list of nfts created by a user with their metadata
-    // function getNfts() public view returns (nftStruct[] memory) {
-    //     uint256 nftCount = tokenIds.current();
-    //     nftStruct[] memory nftSubs = new nftStruct[](nftCount);
-    //     for (uint256 i = 1; i < nftCount; i++) {
-    //         if (nfts[i].owner == payable(msg.sender)) {
-    //             nftSubs[i] = nfts[i];
-    //         }
-    //     }
-
-    //     return nftSubs;
-    // }
-
-    /// @dev fetches NFT magazines that a specific user has created
-    /// @return nftStruct[] list of nfts created by a user with their metadata
-    function getNfts() public view returns (nftStruct[] memory){
+    function getNfts() public view returns (dogInfo[] memory){
         uint256 nftCount = tokenIds.current();
-        nftStruct[] memory myNfts = new nftStruct[](nftCount);
+        dogInfo[] memory myNfts = new dogInfo[](nftCount);
         uint256 j = 0;
         for (uint256 i = 1; i < nftCount; i++){
             if (ownerOf(i) == msg.sender){
@@ -112,7 +125,7 @@ contract PuppyLife is ERC721URIStorage, Ownable {
                 j++;
             }
         }
-        nftStruct[] memory returnMyNFts = new nftStruct[](j);
+        dogInfo[] memory returnMyNFts = new dogInfo[](j);
         for (uint256 i = 0; i < j; i++){
             returnMyNFts[i] = myNfts[i];
         }
@@ -124,7 +137,7 @@ contract PuppyLife is ERC721URIStorage, Ownable {
     /// @return nftStruct NFT data of the specific token ID
     function getIndividualNFT (
         uint256 _tokenId
-    ) public view returns (nftStruct memory) {
+    ) public view returns (dogInfo memory) {
         return nfts[_tokenId];
     }
 
@@ -144,14 +157,23 @@ contract PuppyLife is ERC721URIStorage, Ownable {
         return tokenIds.current();
     }
 
-    function createAndSendNft(string memory _tokenURI, string memory _title,
-            string memory _description, string memory _image, address from, address payable to) 
+    /// @dev this function mints received NFTs
+    /// @param _tokenURI the new token URI
+    /// @param _info dogInfo
+    /// @return newTokenId of the created NFT
+    function createAndSendNft(
+            string memory _tokenURI,
+            dogInfo memory _info,
+            address from, address payable to
+        ) 
         public returns(uint256){
         uint256 newTokenId = tokenIds.current();
         _mint(from, newTokenId);
         _setTokenURI(newTokenId, _tokenURI);
         nftOwners[from].push(newTokenId);
-        setNft(newTokenId, _title, _description, _tokenURI, _image);
+        setNft(
+            newTokenId, _info, _tokenURI
+        );
         tokenIds.increment();
         
         safeTransferFrom(from, to, newTokenId);
