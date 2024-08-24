@@ -90,20 +90,22 @@ contract HappyMaru is ERC721URIStorage, Ownable {
         bool _neutraled,
         string memory _description,
         string memory _image,
-        string memory _tokenURI
+        string memory _tokenURI,
+        address payable _address
     ) public returns (uint256) {
         uint256 newTokenId = tokenIds.current();
-        _mint(msg.sender, newTokenId);
+        _mint(_address, newTokenId);
 
         _setTokenURI(newTokenId, _tokenURI);
-        dogOwners[msg.sender].push(newTokenId);
-        dogInfo memory _info = dogInfo(newTokenId, payable(msg.sender), _name, _breed, _birthDate, _gender, _neutraled, _description, _image);
+        dogOwners[_address].push(newTokenId);
+        dogInfo memory _info = dogInfo(newTokenId, payable(_address), _name, _breed, _birthDate, _gender, _neutraled, _description, _image);
         setNft(
             newTokenId, _info, _tokenURI
         );
         tokenIds.increment();
         return newTokenId;
     }
+
 
     /// @dev fetches NFT that a specific user has created
     /// @return nftStruct[] list of nfts created by a user with their metadata
@@ -124,8 +126,8 @@ contract HappyMaru is ERC721URIStorage, Ownable {
         return returnMyNFts;
     }
 
-    /// @dev fetches details of a particular NFT magazine subscription
-    /// @param _tokenId The token ID of the NFT Magazine
+    /// @dev fetches details of a particular
+    /// @param _tokenId The token ID
     /// @return nftStruct NFT data of the specific token ID
     function getIndividualNFT(
         uint256 _tokenId
@@ -152,7 +154,7 @@ contract HappyMaru is ERC721URIStorage, Ownable {
     /// @dev this function mints received NFTs
     /// @param _tokenURI the new token URI
     /// @param _info dogInfo
-    /// @return newTokenId of the created NFT
+    /// @return newTokenId
     function createAndSendNft(
         string memory _tokenURI,
         dogInfo memory _info,
