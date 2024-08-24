@@ -29,6 +29,8 @@ contract HappyMaru is ERC721URIStorage, Ownable {
         string description;
         // 사진
         string image;
+        // 비문 사진
+        string[] noseData;
     }
 
     mapping(uint256 => dogInfo) private nfts;
@@ -44,15 +46,13 @@ contract HappyMaru is ERC721URIStorage, Ownable {
         string gender,
         bool neutraled,
         string description,
-        string image
+        string image,
+        string[] noseData
     );
 
-    constructor() ERC721("Happy Maru", "HappyMaru's dog INFO ") {
-        tokenIds.increment();
-        userIds.increment();
-    }
+    constructor() ERC721("Happy Maru", "HappyMaru's dog INFO ") {}
 
-    function setNft(
+    function _setNft(
         uint256 _tokenId,
         dogInfo memory _info,
         string memory tokenURI
@@ -68,7 +68,8 @@ contract HappyMaru is ERC721URIStorage, Ownable {
             _info.gender,
             _info.neutraled,
             _info.description,
-            _info.image
+            _info.image,
+            _info.noseData
         );
     }
 
@@ -80,6 +81,7 @@ contract HappyMaru is ERC721URIStorage, Ownable {
     /// @param _neutraled neutraled
     /// @param _description description
     /// @param _image image Url
+    /// @param _noseData nose data
     /// @param _tokenURI image Url
     /// @return newTokenId of the created NFT
     function createDogInfo(
@@ -90,16 +92,17 @@ contract HappyMaru is ERC721URIStorage, Ownable {
         bool _neutraled,
         string memory _description,
         string memory _image,
+        string[] memory _noseData,
         string memory _tokenURI,
         address payable _address
-    ) public returns (uint256) {
+    ) public returns (uint256)  {
         uint256 newTokenId = tokenIds.current();
         _mint(_address, newTokenId);
 
         _setTokenURI(newTokenId, _tokenURI);
         dogOwners[_address].push(newTokenId);
-        dogInfo memory _info = dogInfo(newTokenId, payable(_address), _name, _breed, _birthDate, _gender, _neutraled, _description, _image);
-        setNft(
+        dogInfo memory _info = dogInfo(newTokenId, payable(_address), _name, _breed, _birthDate, _gender, _neutraled, _description, _image, _noseData);
+        _setNft(
             newTokenId, _info, _tokenURI
         );
         tokenIds.increment();
@@ -109,27 +112,21 @@ contract HappyMaru is ERC721URIStorage, Ownable {
 
     /// @dev fetches NFT that a specific user has created
     /// @return nftStruct[] list of nfts created by a user with their metadata
-    function getNfts() public view returns (dogInfo[] memory) {
-        uint256 nftCount = tokenIds.current();
-        dogInfo[] memory myNfts = new dogInfo[](nftCount);
-        uint256 j = 0;
-        for (uint256 i = 1; i < nftCount; i++) {
-            if (ownerOf(i) == msg.sender) {
-                myNfts[j] = nfts[i];
-                j++;
-            }
+    function getNfts(address _owner) public view returns (dogInfo[] memory) {
+        uint256[] memory ownDogIds =  dogOwners[_owner];
+        dogInfo[] memory ownDogInfos = new dogInfo[](ownDogIds.length);
+
+        for (uint256 i = 0; i < ownDogIds.length; i++){
+            ownDogInfos[i] = nfts[ownDogIds[i]];
         }
-        dogInfo[] memory returnMyNFts = new dogInfo[](j);
-        for (uint256 i = 0; i < j; i++) {
-            returnMyNFts[i] = myNfts[i];
-        }
-        return returnMyNFts;
+        
+        return ownDogInfos;
     }
 
     /// @dev fetches details of a particular
     /// @param _tokenId The token ID
     /// @return nftStruct NFT data of the specific token ID
-    function getIndividualNFT(
+    function getDogInfo(
         uint256 _tokenId
     ) public view returns (dogInfo memory) {
         return nfts[_tokenId];
@@ -149,28 +146,5 @@ contract HappyMaru is ERC721URIStorage, Ownable {
 
     function getNftsCount() public view returns (uint256) {
         return tokenIds.current();
-    }
-
-    /// @dev this function mints received NFTs
-    /// @param _tokenURI the new token URI
-    /// @param _info dogInfo
-    /// @return newTokenId
-    function createAndSendNft(
-        string memory _tokenURI,
-        dogInfo memory _info,
-        address from, address payable to
-    ) public returns (uint256) {
-        uint256 newTokenId = tokenIds.current();
-        _mint(from, newTokenId);
-        _setTokenURI(newTokenId, _tokenURI);
-        dogOwners[from].push(newTokenId);
-        setNft(
-            newTokenId, _info, _tokenURI
-        );
-        tokenIds.increment();
-
-        safeTransferFrom(from, to, newTokenId);
-        nfts[newTokenId].owner = to;
-        return newTokenId;
     }
 }
